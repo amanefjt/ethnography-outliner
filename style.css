@@ -45,6 +45,14 @@ body {
     background-color: var(--bg-color);
     color: var(--text-primary);
     overflow: hidden;
+    overscroll-behavior-x: none;
+}
+
+.connector-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 900;
 }
 
 #app {
@@ -786,6 +794,7 @@ main {
     padding-left: 16px;
     border-left: 1px solid var(--border-color);
 }
+
 /* Quick Actions */
 .quick-actions {
     position: absolute;
@@ -819,65 +828,161 @@ main {
 /* Group Colors */
 /* Apply similar styles as note-card colors but to group border/bg */
 /* Slate (Default) */
-.group-card.color-slate { border-color: #cbd5e1; background: #fff; }
-.group-card.color-slate .group-header { background: rgba(0,0,0,0.03); }
+.group-card.color-slate {
+    border-color: #cbd5e1;
+    background: #fff;
+}
+
+.group-card.color-slate .group-header {
+    background: rgba(0, 0, 0, 0.03);
+}
 
 /* Red */
-.group-card.color-red { border-color: #fca5a5; background: #fef2f2; }
-.group-card.color-red .group-header { background: rgba(254, 226, 226, 0.5); }
+.group-card.color-red {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.group-card.color-red .group-header {
+    background: rgba(254, 226, 226, 0.5);
+}
 
 /* Orange */
-.group-card.color-orange { border-color: #fdba74; background: #fff7ed; }
-.group-card.color-orange .group-header { background: rgba(255, 237, 213, 0.5); }
+.group-card.color-orange {
+    border-color: #fdba74;
+    background: #fff7ed;
+}
+
+.group-card.color-orange .group-header {
+    background: rgba(255, 237, 213, 0.5);
+}
 
 /* Amber */
-.group-card.color-amber { border-color: #fcd34d; background: #fffbeb; }
-.group-card.color-amber .group-header { background: rgba(254, 243, 199, 0.5); }
+.group-card.color-amber {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
+.group-card.color-amber .group-header {
+    background: rgba(254, 243, 199, 0.5);
+}
 
 /* Green */
-.group-card.color-green { border-color: #86efac; background: #f0fdf4; }
-.group-card.color-green .group-header { background: rgba(220, 252, 231, 0.5); }
+.group-card.color-green {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.group-card.color-green .group-header {
+    background: rgba(220, 252, 231, 0.5);
+}
 
 /* Emerald */
-.group-card.color-emerald { border-color: #6ee7b7; background: #ecfdf5; }
-.group-card.color-emerald .group-header { background: rgba(209, 250, 229, 0.5); }
+.group-card.color-emerald {
+    border-color: #6ee7b7;
+    background: #ecfdf5;
+}
+
+.group-card.color-emerald .group-header {
+    background: rgba(209, 250, 229, 0.5);
+}
 
 /* Teal */
-.group-card.color-teal { border-color: #5eead4; background: #f0fdfa; }
-.group-card.color-teal .group-header { background: rgba(204, 251, 241, 0.5); }
+.group-card.color-teal {
+    border-color: #5eead4;
+    background: #f0fdfa;
+}
+
+.group-card.color-teal .group-header {
+    background: rgba(204, 251, 241, 0.5);
+}
 
 /* Cyan */
-.group-card.color-cyan { border-color: #67e8f9; background: #ecfeff; }
-.group-card.color-cyan .group-header { background: rgba(207, 250, 254, 0.5); }
+.group-card.color-cyan {
+    border-color: #67e8f9;
+    background: #ecfeff;
+}
+
+.group-card.color-cyan .group-header {
+    background: rgba(207, 250, 254, 0.5);
+}
 
 /* Sky */
-.group-card.color-sky { border-color: #7dd3fc; background: #f0f9ff; }
-.group-card.color-sky .group-header { background: rgba(224, 242, 254, 0.5); }
+.group-card.color-sky {
+    border-color: #7dd3fc;
+    background: #f0f9ff;
+}
+
+.group-card.color-sky .group-header {
+    background: rgba(224, 242, 254, 0.5);
+}
 
 /* Blue */
-.group-card.color-blue { border-color: #93c5fd; background: #eff6ff; }
-.group-card.color-blue .group-header { background: rgba(219, 234, 254, 0.5); }
+.group-card.color-blue {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+
+.group-card.color-blue .group-header {
+    background: rgba(219, 234, 254, 0.5);
+}
 
 /* Indigo */
-.group-card.color-indigo { border-color: #a5b4fc; background: #eef2ff; }
-.group-card.color-indigo .group-header { background: rgba(224, 231, 255, 0.5); }
+.group-card.color-indigo {
+    border-color: #a5b4fc;
+    background: #eef2ff;
+}
+
+.group-card.color-indigo .group-header {
+    background: rgba(224, 231, 255, 0.5);
+}
 
 /* Violet */
-.group-card.color-violet { border-color: #c4b5fd; background: #f5f3ff; }
-.group-card.color-violet .group-header { background: rgba(237, 233, 254, 0.5); }
+.group-card.color-violet {
+    border-color: #c4b5fd;
+    background: #f5f3ff;
+}
+
+.group-card.color-violet .group-header {
+    background: rgba(237, 233, 254, 0.5);
+}
 
 /* Purple */
-.group-card.color-purple { border-color: #d8b4fe; background: #faf5ff; }
-.group-card.color-purple .group-header { background: rgba(243, 232, 255, 0.5); }
+.group-card.color-purple {
+    border-color: #d8b4fe;
+    background: #faf5ff;
+}
+
+.group-card.color-purple .group-header {
+    background: rgba(243, 232, 255, 0.5);
+}
 
 /* Fuchsia */
-.group-card.color-fuchsia { border-color: #f0abfc; background: #fdf4ff; }
-.group-card.color-fuchsia .group-header { background: rgba(250, 232, 255, 0.5); }
+.group-card.color-fuchsia {
+    border-color: #f0abfc;
+    background: #fdf4ff;
+}
+
+.group-card.color-fuchsia .group-header {
+    background: rgba(250, 232, 255, 0.5);
+}
 
 /* Pink */
-.group-card.color-pink { border-color: #f9a8d4; background: #fdf2f8; }
-.group-card.color-pink .group-header { background: rgba(252, 231, 243, 0.5); }
+.group-card.color-pink {
+    border-color: #f9a8d4;
+    background: #fdf2f8;
+}
+
+.group-card.color-pink .group-header {
+    background: rgba(252, 231, 243, 0.5);
+}
 
 /* Rose */
-.group-card.color-rose { border-color: #fda4af; background: #fff1f2; }
-.group-card.color-rose .group-header { background: rgba(255, 228, 230, 0.5); }
+.group-card.color-rose {
+    border-color: #fda4af;
+    background: #fff1f2;
+}
+
+.group-card.color-rose .group-header {
+    background: rgba(255, 228, 230, 0.5);
+}

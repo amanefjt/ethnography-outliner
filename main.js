@@ -36,9 +36,42 @@ window.onload = () => {
     renderCanvas();
     setupEventListeners();
 
-    // Initial centering
-    const cx = window.innerWidth / 2 - 400; // Roughly center
-    const cy = window.innerHeight / 2 - 300;
-    state.offset = { x: cx, y: cy };
-    renderCanvas();
+    // Initial centering (Zoom to Fit)
+    zoomToFit();
 };
+
+function zoomToFit() {
+    const items = [...state.notes, ...state.groups.filter(g => !g.groupId)];
+    if (items.length === 0) {
+        state.offset = { x: window.innerWidth / 2 - 400, y: window.innerHeight / 2 - 300 };
+        state.zoom = 1;
+        renderCanvas();
+        return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    items.forEach(it => {
+        minX = Math.min(minX, it.x);
+        minY = Math.min(minY, it.y);
+        maxX = Math.max(maxX, it.x + (it.width || 400));
+        maxY = Math.max(maxY, it.y + (it.height || 300));
+    });
+
+    const padding = 100;
+    const w = maxX - minX + padding * 2;
+    const h = maxY - minY + padding * 2;
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
+
+    const scaleX = screenW / w;
+    const scaleY = screenH / h;
+    let zoom = Math.min(scaleX, scaleY);
+    zoom = Math.min(Math.max(0.1, zoom), 1.5); // Cap zoom
+
+    state.zoom = zoom;
+    // Center the content
+    state.offset.x = (screenW - w * zoom) / 2 - minX * zoom + padding * zoom;
+    state.offset.y = (screenH - h * zoom) / 2 - minY * zoom + padding * zoom;
+
+    renderCanvas();
+}

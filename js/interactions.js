@@ -116,10 +116,16 @@ function handleMouseMove(e) {
         renderCanvas();
     } else if (state.dragType === 'resize') {
         const item = state.dragItem;
-        const w = (currentMouseCanvasPos.x - item.x);
-        const h = (currentMouseCanvasPos.y - item.y);
-        if (w > 100) item.width = w;
-        if (h > 50) item.height = h;
+        const edge = state.resizeEdge;
+
+        if (edge.includes('e')) {
+            const w = (currentMouseCanvasPos.x - item.x);
+            if (w > 100) item.width = w;
+        }
+        if (edge.includes('s')) {
+            const h = (currentMouseCanvasPos.y - item.y);
+            if (h > 50) item.height = h;
+        }
         renderCanvas();
     }
 }
@@ -219,6 +225,7 @@ function startResize(e, item, edge) {
     state.isDragging = true;
     state.dragType = 'resize';
     state.dragItem = item;
+    state.resizeEdge = edge;
 }
 
 function getCanvasPos(e) {

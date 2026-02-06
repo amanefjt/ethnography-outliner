@@ -44,7 +44,7 @@ function renderGroups() {
     sortedGroups.forEach(g => {
         if (isParentCollapsed(g.groupId)) return;
         const el = document.createElement('div');
-        el.className = `group-card ${g.collapsed ? 'collapsed' : ''} ${state.selectedIds.includes(g.id) ? 'selected' : ''}`;
+        el.className = `group-card color-${g.color || 'slate'} ${g.collapsed ? 'collapsed' : ''} ${state.selectedIds.includes(g.id) ? 'selected' : ''}`;
         el.dataset.id = g.id;
         el.style.left = `${g.x}px`;
         el.style.top = `${g.y}px`;
@@ -61,6 +61,7 @@ function renderGroups() {
             <div class="item-actions">
                 <button class="action-btn btn-duplicate" title="複製"><i data-lucide="copy"></i></button>
                 <button class="action-btn btn-connect" title="関係付け"><i data-lucide="link"></i></button>
+                <button class="action-btn btn-color" title="色変更"><i data-lucide="palette"></i></button>
                 <button class="action-btn btn-delete" title="削除"><i data-lucide="trash-2"></i></button>
             </div>
         </div>

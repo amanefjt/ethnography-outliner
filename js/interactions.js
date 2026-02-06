@@ -247,6 +247,7 @@ function attachGroupEventListeners(el, g) {
     el.querySelector('.btn-collapse').onclick = e => { e.stopPropagation(); g.collapsed = !g.collapsed; renderCanvas(); saveData(); };
     el.querySelector('.btn-duplicate').onclick = e => { e.stopPropagation(); duplicateItem(g.id, 'group'); };
     el.querySelector('.btn-connect').onclick = e => { e.stopPropagation(); state.connectingSource = g.id; renderCanvas(); };
+    el.querySelector('.btn-color').onclick = e => { e.stopPropagation(); rotateColor(g); };
     el.querySelector('.btn-delete').onclick = e => { e.stopPropagation(); deleteItem(g.id, 'group'); };
 }
 

@@ -249,6 +249,7 @@ function renderQuickActions() {
             y: minY - padding * 1.5, // ヘッダー分
             width: maxX - minX + padding * 2,
             height: maxY - minY + padding * 2.5,
+            color: getRandomColor(), // ランダム色
             collapsed: false,
             groupId: null
         };

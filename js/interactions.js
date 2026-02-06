@@ -282,7 +282,9 @@ function deleteItem(id, type) {
         } else if (type === 'relation') {
             state.relations = state.relations.filter(r => r.id !== id);
         }
-        state.pendingDelete = null; renderCanvas(); saveData();
+        state.pendingDelete = null;
+        cleanupEmptyGroups(); // 削除によって1つだけになったグループがあれば掃除
+        renderCanvas(); saveData();
     } else {
         state.pendingDelete = { id, timer: setTimeout(() => { state.pendingDelete = null; renderCanvas(); }, 3000) };
         renderCanvas();

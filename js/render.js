@@ -62,7 +62,7 @@ function renderGroups() {
                 <button class="action-btn btn-duplicate" title="複製"><i data-lucide="copy"></i></button>
                 <button class="action-btn btn-connect" title="関係付け"><i data-lucide="link"></i></button>
                 <button class="action-btn btn-color" title="色変更"><i data-lucide="palette"></i></button>
-                <button class="action-btn btn-delete" title="削除"><i data-lucide="trash-2"></i></button>
+                <button class="action-btn btn-delete ${state.pendingDelete && state.pendingDelete.id === g.id ? 'pending' : ''}" title="削除"><i data-lucide="${state.pendingDelete && state.pendingDelete.id === g.id ? 'check' : 'trash-2'}"></i></button>
             </div>
         </div>
         ${g.collapsed ? '<div class="collapsed-indicator">...</div>' : ''}

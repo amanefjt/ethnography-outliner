@@ -128,11 +128,44 @@ function handleMouseUp() {
     state.isDragging = false;
     DOM.canvasContainer.style.cursor = 'default';
     if (state.dragType === 'note' || state.dragType === 'group' || state.dragType === 'resize') {
+        if (state.dragType !== 'resize') updateItemParent(state.dragItem);
         cleanupEmptyGroups(); // グループから出た、あるいは殻になったグループの掃除
         saveData();
     }
     state.dragType = null;
     state.dragItem = null;
+}
+
+function updateItemParent(item) {
+    if (!item) return;
+    const cx = item.x + (item.width || (typeof item.id === 'string' ? 400 : 300)) / 2;
+    const cy = item.y + (item.height || (typeof item.id === 'string' ? 300 : 150)) / 2;
+
+    // Find smallest enclosing group
+    // Sort logic handled by finding ALL enclosing groups and picking the one with max depth?
+    // Or just finding the one with the smallest area? Smallest area is reliable.
+    const candidates = state.groups.filter(g => {
+        if (g.collapsed) return false;
+        if (g.id === item.id) return false; // Self
+        if (typeof item.id === 'string' && isDescendant(item.id, g.id)) return false; // Cannot drop parent into child
+        return (cx >= g.x && cx <= g.x + (g.width || 400) && cy >= g.y && cy <= g.y + (g.height || 300));
+    });
+
+    if (candidates.length > 0) {
+        // Pick smallest area (likely the innermost)
+        candidates.sort((a, b) => ((a.width * a.height) - (b.width * b.height)));
+        item.groupId = candidates[0].id;
+    } else {
+        item.groupId = null;
+    }
+}
+
+function isDescendant(parentId, childId) {
+    // Check if childId is a descendant of parentId
+    const c = state.groups.find(g => g.id === childId);
+    if (!c || !c.groupId) return false;
+    if (c.groupId === parentId) return true;
+    return isDescendant(parentId, c.groupId);
 }
 
 function handleWheel(e) {

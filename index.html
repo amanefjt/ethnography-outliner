@@ -95,21 +95,50 @@
                 <div class="import-help"
                     style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <strong
-                        style="color: var(--text-primary); display: block; margin-bottom: 8px; font-size: 0.95rem;">インポートの仕組み（2つのモード）</strong>
+                        style="color: var(--text-primary); display: block; margin-bottom: 12px; font-size: 0.95rem;">Workflowy
+                        / Markdown インポート例</strong>
 
-                    <div style="margin-bottom: 12px; border-bottom: 1px dashed #e2e8f0; padding-bottom: 12px;">
-                        <span style="font-weight: 600; color: #475569;">モードA: Workflowy / Markdown形式</span>
-                        <p style="margin-top: 4px;">行頭に <code>- </code> (ハイフン+空白) がある場合、階層構造として読み取ります。</p>
-                        <ul style="list-style: disc; margin-left: 20px; color: #334155;">
-                            <li>親トピック → <b>カードのタイトル</b>になります。</li>
-                            <li>子トピック（インデント） → <b>カードの本文</b>として結合されます。</li>
-                        </ul>
-                    </div>
+                    <div style="display: flex; gap: 16px; align-items: stretch;">
+                        <!-- Input Example -->
+                        <div
+                            style="flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.75rem; color: #334155;">
+                            <div style="color: #64748b; margin-bottom: 6px; font-weight: bold;">(入力テキスト)</div>
+                            <div>- <span style="color: #0369a1; font-weight: 600;">(1)泥遊びを思い出す</span></div>
+                            <div style="padding-left: 14px;">- (2)公園の砂場で...</div>
+                            <div style="padding-left: 14px;">- (3)自分が子供の頃...</div>
+                            <div style="margin-top: 8px;">- (4)高齢の男性が一人で...</div>
+                            <div style="margin-top: 8px;">- <span
+                                    style="color: #0369a1; font-weight: 600;">(6)思考が途切れ途切れ</span></div>
+                            <div style="padding-left: 14px;">- (7)Antigravityで遊ぶのは...</div>
+                        </div>
 
-                    <div>
-                        <span style="font-weight: 600; color: #475569;">モードB: ベタ打ちテキスト</span>
-                        <p style="margin-top: 4px;"><code>- </code>
-                            がない場合、<b>「空行（2回の改行）」</b>ごとに別のカードになります。<br>タイトルは自動設定されず（空欄）、すべて本文になります。</p>
+                        <!-- Arrow -->
+                        <div
+                            style="display: flex; align-items: center; justify-content: center; color: var(--accent-color);">
+                            <i data-lucide="arrow-right"></i>
+                        </div>
+
+                        <!-- Result Example -->
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="color: #64748b; font-weight: bold; font-size: 0.75rem; margin-bottom: -4px;">
+                                (カード化の結果)</div>
+
+                            <!-- Card 1 -->
+                            <div
+                                style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <div
+                                    style="font-weight: 600; font-size: 0.75rem; color: #0369a1; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">
+                                    (1)泥遊びを思い出す</div>
+                                <div style="font-size: 0.7rem; color: #334155; line-height: 1.4;">
+                                    (2)公園の砂場で...<br>(3)自分が子供の頃...</div>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div
+                                style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <div style="font-size: 0.7rem; color: #334155; line-height: 1.4;">(4)高齢の男性が一人で...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <textarea id="import-input" placeholder="ここにテキストを貼り付けてください..."></textarea>

@@ -786,3 +786,32 @@ main {
     padding-left: 16px;
     border-left: 1px solid var(--border-color);
 }
+/* Quick Actions */
+.quick-actions {
+    position: absolute;
+    display: flex;
+    gap: 8px;
+    z-index: 2000;
+    transform: translate(-50%, -100%);
+    pointer-events: auto;
+    padding-bottom: 12px;
+}
+
+.quick-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+
+.quick-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}

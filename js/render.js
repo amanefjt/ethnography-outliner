@@ -162,25 +162,38 @@ function renderRelations(svg, labelsLayer) {
             input.onchange = e => { pushHistory(); r.label = e.target.value; saveData(); };
             input.onmousedown = e => e.stopPropagation();
 
+            const isPending = state.pendingDelete && state.pendingDelete.id === r.id;
             const delBtn = document.createElement('button');
-            delBtn.className = 'btn-rel-delete';
-            delBtn.innerHTML = '<i data-lucide="x"></i>';
+            delBtn.className = `btn-rel-delete ${isPending ? 'pending' : ''}`;
+            delBtn.innerHTML = `<i data-lucide="${isPending ? 'check' : 'x'}"></i>`;
             delBtn.onclick = e => {
                 e.stopPropagation();
-                if (confirm('この関係性を削除しますか？')) {
+                deleteItem(r.id, 'relation');
+            };
+
+            // ダブルクリックでも削除可能（即時削除）
+            pill.ondblclick = e => {
+                e.stopPropagation();
+                deleteItem(r.id, 'relation'); // deleteItem handles logic, but if not pending, it sets pending. 
+                // Wait, deleteItem sets pending first. Double click implies "Action".
+                // If we want double click to delete IMMEDIATELY, we might need to bypass deleteItem or call it twice?
+                // Or just let double click trigger the first phase? User said "2 clicks button". 
+                // Double click on label is a different interaction. Let's keep it as "instant delete" or "trigger delete".
+                // Actually, duplicateItem calls pushHistory. deleteItem calls pushHistory.
+                // If double click calls deleteItem, it sets pending. User has to click AGAIN. That's annoying for double click.
+                // Let's make double click INSTANT delete.
+                if (state.pendingDelete && state.pendingDelete.id === r.id) {
+                    // Already pending, just kill it.
+                    deleteItem(r.id, 'relation');
+                } else {
+                    // Force delete
                     pushHistory();
                     state.relations = state.relations.filter(rel => rel.id !== r.id);
+                    if (state.pendingDelete && state.pendingDelete.id === r.id) clearTimeout(state.pendingDelete.timer);
+                    state.pendingDelete = null;
                     saveData();
                     renderCanvas();
                 }
-            };
-
-            // ダブルクリックでも削除可能
-            pill.ondblclick = e => {
-                e.stopPropagation();
-                state.relations = state.relations.filter(rel => rel.id !== r.id);
-                saveData();
-                renderCanvas();
             };
 
             pill.appendChild(input);
@@ -219,7 +232,7 @@ function renderQuickActions() {
     const container = document.createElement('div');
     container.className = 'quick-actions';
     container.style.left = `${cx}px`;
-    container.style.top = `${minY - 50}px`; // アイテム群の上に表示
+    container.style.top = `${Math.max(10, minY - 50)}px`; // アイテム群の上に表示 (画面外に出ないよう調整)
 
     const btn = document.createElement('button');
     btn.className = 'quick-btn';

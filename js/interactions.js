@@ -210,9 +210,15 @@ function attachNoteEventListeners(el, n) {
     el.onmousedown = e => {
         if (!n.collapsed) {
             const edge = getResizeEdge(e, el);
-            // Note resize disabled generally, but kept structure
+            if (edge) { startResize(e, n, edge); return; }
         }
         startDrag(e, 'note');
+    };
+    el.onmousemove = e => {
+        if (!n.collapsed && !state.dragType) {
+            const edge = getResizeEdge(e, el);
+            el.style.cursor = edge ? getResizeCursor(edge) : 'auto';
+        }
     };
     el.querySelector('.title-input').onclick = e => e.stopPropagation();
     el.querySelector('.title-input').onchange = e => { pushHistory(); n.title = e.target.value; saveData(); };
@@ -273,6 +279,8 @@ function deleteItem(id, type) {
             state.groups = state.groups.filter(g => g.id !== id);
             state.notes.forEach(n => { if (n.groupId === id) n.groupId = null; });
             state.groups.forEach(g => { if (g.groupId === id) g.groupId = null; });
+        } else if (type === 'relation') {
+            state.relations = state.relations.filter(r => r.id !== id);
         }
         state.pendingDelete = null; renderCanvas(); saveData();
     } else {

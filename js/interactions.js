@@ -1,238 +1,498 @@
 // ============================================================================
-// INTERACTIONS & EVENTS
+// INTERACTIONS & EVENTS (V7 - Debug Capture)
+// ============================================================================
+
+console.log('interactions.js v7 loaded');
+
+// ============================================================================
+// SETUP
 // ============================================================================
 
 function setupEventListeners() {
+    console.log("setupEventListeners (Refactored v7 - Capture) START");
+    // Canvas Events (Delegation)
+    if (DOM.canvasContainer) {
+        DOM.canvasContainer.addEventListener('mousedown', handleMouseDown);
+        DOM.canvasContainer.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
     window.addEventListener('resize', () => { renderCanvas(); });
     window.addEventListener('keydown', handleKeydown);
-    window.addEventListener('keyup', handleKeyup);
-
-    // Canvas Events
-    DOM.canvasContainer.addEventListener('mousedown', handleMouseDown);
+    // window.addEventListener('keyup', handleKeyup); // Disabled: handler missing
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    DOM.canvasContainer.addEventListener('wheel', handleWheel, { passive: false });
 
-    // UI Buttons
-    DOM.viewToggle.onclick = toggleView;
-    DOM.addNoteBtn.onclick = openNoteModal;
-    DOM.addGroupBtn.onclick = addGroup;
-    DOM.saveNoteBtn.onclick = saveNote;
-    DOM.cancelNoteBtn.onclick = closeNoteModal;
-    DOM.rearrangeBtn.onclick = autoRearrange;
-    DOM.zoomInBtn.onclick = () => { state.zoom = Math.min(state.zoom + 0.1, 3); renderCanvas(); };
-    DOM.zoomOutBtn.onclick = () => { state.zoom = Math.max(state.zoom - 0.1, 0.1); renderCanvas(); };
-    DOM.undoBtn.onclick = undo;
-    DOM.redoBtn.onclick = redo;
-    DOM.importBtn.onclick = openImportModal;
-    DOM.saveImportBtn.onclick = handleImport;
-    DOM.cancelImportBtn.onclick = closeImportModal;
-    DOM.closeViewBtn.onclick = closeViewModal;
+    // -----------------------------------------------------------------------
+    // CENTRALIZED CLICK DELEGATION (CAPTURE PHASE)
+    // -----------------------------------------------------------------------
+    window.addEventListener('click', (e) => {
+        console.log('DEBUG: Window Capture Click detected on:', e.target.tagName, e.target.className, e.target.id);
+
+        const target = e.target;
+
+        // Helper to find closest button/element with specific ID or Action
+        const btn = target.closest('button');
+        const actionBtn = target.closest('[data-action]');
+
+        if (btn) console.log('DEBUG: Closest button found:', btn.id);
+
+        // 1. ID-based Actions (Main Toolbar & Dialog Buttons)
+        if (btn && btn.id) {
+            console.log('DEBUG: Processing ID action:', btn.id);
+            switch (btn.id) {
+                // Main Toolbar
+                case 'add-note':
+                    openDialog('note-dialog', () => {
+                        console.log('DEBUG: Opening note dialog callback');
+                        DOM.noteTitleInput.value = '';
+                        DOM.noteInput.value = '';
+                        setTimeout(() => DOM.noteInput.focus(), 100);
+                    });
+                    return;
+                case 'import-text':
+                    openDialog('import-dialog');
+                    return;
+                case 'btn-project':
+                    openProjectModal();
+                    return;
+                case 'view-toggle':
+                    toggleView();
+                    return;
+
+                // Note Dialog
+                case 'save-note': e.preventDefault(); saveNote(); return;
+                case 'cancel-note': e.preventDefault(); closeDialog('note-dialog'); return;
+
+                // Import Dialog
+                case 'save-import': handleImport(); return;
+                case 'cancel-import': closeDialog('import-dialog'); return;
+
+                // View modal
+                case 'close-view': closeDialog('view-dialog'); return;
+
+                // Project Modal
+                case 'btn-close-project': closeDialog('project-dialog'); return;
+                case 'btn-create-project': handleCreateProject(); return;
+
+                // AI & Settings
+                case 'btn-reject-proposal': DOM.aiProposalModal.close(); return;
+                case 'btn-accept-proposal': acceptProposal(); return;
+                case 'btn-close-settings': closeDialog('settings-dialog'); return;
+                case 'btn-save-settings': saveSettings(); return;
+                case 'btn-ai-result-close': closeDialog('ai-result-dialog'); return;
+
+                // Canvas Controls
+                case 'zoom-in': applyZoom(0.1, DOM.canvasContainer.clientWidth / 2, DOM.canvasContainer.clientHeight / 2); return;
+                case 'zoom-out': applyZoom(-0.1, DOM.canvasContainer.clientWidth / 2, DOM.canvasContainer.clientHeight / 2); return;
+                case 'undo': undo(); return;
+                case 'redo': redo(); return;
+            }
+        }
+
+        // 2. Data-Action Buttons (Note Actions, Context Bar)
+        if (actionBtn) {
+            handleGlobalAction(actionBtn, e);
+            return;
+        }
+
+        // 3. Toggle Settings (if standard ID not used)
+        if (target.closest('#btn-settings')) {
+            openDialog('settings-dialog');
+            return;
+        }
+    }, true); // Enable Capture Phase
+
+    console.log("setupEventListeners (Refactored v7 - Capture) END");
 }
 
-function handleKeydown(e) {
-    if (e.key === ' ' && !state.isDragging) { DOM.canvasContainer.style.cursor = 'grab'; }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'y') { e.preventDefault(); redo(); }
+function toggleView() {
+    const isCanvas = DOM.canvasView.classList.contains('active');
+    if (isCanvas) {
+        DOM.canvasView.classList.remove('active');
+        DOM.outlinerView.classList.add('active');
+        renderOutline();
+    } else {
+        DOM.outlinerView.classList.remove('active');
+        DOM.canvasView.classList.add('active');
+        renderCanvas();
+    }
 }
 
-function handleKeyup(e) {
-    if (e.key === ' ') { DOM.canvasContainer.style.cursor = 'default'; }
+// ===========================================================================
+// DIALOG HELPERS
+// ===========================================================================
+
+function openDialog(id, callback) {
+    console.log('openDialog called for:', id);
+    const dialog = document.getElementById(id);
+    if (dialog) {
+        dialog.showModal();
+        if (callback) callback();
+    } else {
+        console.error('Dialog not found:', id);
+    }
+}
+
+function closeDialog(id) {
+    const dialog = document.getElementById(id);
+    if (dialog) dialog.close();
+}
+
+function showConfirmModal(message, callback) {
+    if (window.confirm(message)) {
+        callback();
+    }
+}
+
+// ===========================================================================
+// PROJECT MANAGEMENT
+// ===========================================================================
+
+function openProjectModal() {
+    const dialog = document.getElementById('project-dialog');
+    if (!dialog) return;
+
+    const listEl = document.getElementById('project-list-container');
+    if (listEl) {
+        listEl.innerHTML = '';
+        const projects = getProjectList();
+        projects.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'project-item';
+            div.style.padding = '12px';
+            div.style.cursor = 'pointer';
+            div.style.borderBottom = '1px solid var(--border-color)';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+
+            if (p === state.currentProject) {
+                div.style.fontWeight = 'bold';
+                div.style.backgroundColor = '#f0f9ff';
+            }
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = p;
+            nameSpan.onclick = (e) => {
+                e.stopPropagation();
+                if (p !== state.currentProject) {
+                    switchProject(p);
+                    dialog.close();
+                }
+            };
+
+            div.appendChild(nameSpan);
+
+            // Delete button for projects
+            if (p !== 'default') {
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+                delBtn.className = 'action-btn'; // reuse class
+                delBtn.style.width = '32px';
+                delBtn.style.height = '32px';
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`プロジェクト "${p}" を削除しますか？\nこの操作は取り消せません。`)) {
+                        deleteProject(p);
+                        openProjectModal(); // Refresh
+                    }
+                };
+                div.appendChild(delBtn);
+            }
+
+            listEl.appendChild(div);
+        });
+        lucide.createIcons();
+    }
+
+    const input = document.getElementById('new-project-name');
+    if (input) input.value = '';
+    dialog.showModal();
+}
+
+function handleCreateProject() {
+    const input = document.getElementById('new-project-name');
+    const name = input.value.trim();
+    if (name) {
+        createNewProject(name);
+        closeDialog('project-dialog');
+    }
+}
+
+// ===========================================================================
+// GLOBAL EVENT DELEGATION ACTIONS
+// ===========================================================================
+
+function handleGlobalAction(actionBtn, e) {
+    const action = actionBtn.dataset.action;
+    const id = actionBtn.dataset.id;
+    console.log('Global Action:', action, id);
+
+    switch (action) {
+        case 'toggle-collapse':
+            toggleCollapse(id, e);
+            break;
+        case 'rename-group':
+            actionBtn.focus();
+            break;
+        case 'item-color':
+            cycleColor(id, actionBtn.closest('.note-card') ? 'note' : 'group');
+            break;
+        case 'item-delete':
+            deleteItem(id, actionBtn.closest('.note-card') ? 'note' : 'group');
+            break;
+        case 'ctx-color':
+            state.selectedIds.forEach(sid => {
+                const item = state.notes.find(n => n.id == sid) || state.groups.find(g => g.id == sid);
+                if (item) rotateColor(item);
+            });
+            break;
+        case 'ctx-connect':
+            state.connectingSource = [...state.selectedIds];
+            state.selectedIds = [];
+            DOM.canvasContainer.style.cursor = 'crosshair';
+            renderCanvas();
+            break;
+        case 'ctx-delete':
+            deleteItem(state.selectedIds, 'multi');
+            break;
+        case 'ctx-ai-naming':
+            const selectedItems = state.selectedIds.map(sid => state.notes.find(n => n.id == sid) || state.groups.find(g => g.id == sid)).filter(Boolean);
+            AIFeatures.generateSummaryProposal(selectedItems);
+            break;
+    }
+}
+
+function toggleCollapse(id, e) {
+    if (e) e.stopPropagation();
+
+    // Check note
+    const n = state.notes.find(x => x.id == id);
+    if (n) {
+        n.collapsed = !n.collapsed;
+        saveData();
+        renderCanvas();
+        return;
+    }
+
+    // Check group
+    const g = state.groups.find(x => x.id == id);
+    if (g) {
+        g.collapsed = !g.collapsed;
+        saveData();
+        renderCanvas();
+    }
 }
 
 function handleMouseDown(e) {
-    if (e.target.closest('.action-btn') || e.target.closest('.quick-btn') || e.target.tagName === 'INPUT') return;
-    const isSpace = e.code === 'Space' || e.button === 1;
+    if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.closest('dialog')) return;
 
     currentMouseCanvasPos = getCanvasPos(e); // Start pos
+    const isSpace = e.code === 'Space' || e.button === 1;
 
+    // 1. Pan Canvas (Space or Middle Click or BG click)
     if (isSpace || (e.button === 0 && e.target === DOM.canvasContainer)) {
         state.isDragging = true;
         state.dragType = 'canvas';
         state.dragStart = { x: e.clientX, y: e.clientY };
         DOM.canvasContainer.style.cursor = 'grabbing';
-    } else if (state.connectingSource && e.button === 0) {
-        // 完成させる
-        // クリックした場所にあるアイテムを探す
-        // Note: Canvas上の要素をクリックした場合、e.targetはnote-card等になる
-        const targetEl = e.target.closest('.note-card') || e.target.closest('.group-card');
-        if (targetEl) {
-            const tid = targetEl.dataset.id;
-            const pid = targetEl.classList.contains('group-card') ? tid : parseInt(tid); // group id is string, note id is int
-            if (pid !== state.connectingSource) {
-                pushHistory();
-                state.relations.push({
-                    source: state.connectingSource,
-                    target: pid,
-                    id: Date.now(),
-                    dash: CONSTANTS.DASH_PATTERNS[Math.floor(Math.random() * CONSTANTS.DASH_PATTERNS.length)]
-                });
-                saveData();
-            }
+
+        // Deselect if clicking background
+        if (e.target === DOM.canvasContainer) {
+            state.selectedIds = [];
+            renderContextBar();
+            renderCanvas();
         }
-        state.connectingSource = null;
-        renderCanvas();
-    } else if (e.target === DOM.canvasContainer || e.target.id === 'canvas' || e.target.id === 'connector-layer') {
-        // 背景クリックで選択解除
-        state.selectedIds = [];
-        state.connectingSource = null;
-        renderCanvas();
-    }
-}
-
-function handleMouseMove(e) {
-    currentMouseCanvasPos = getCanvasPos(e);
-    if (state.connectingSource) {
-        // 線を引くために再描画
-        renderCanvas();
-    }
-
-    if (!state.isDragging) return;
-
-    if (state.dragType === 'canvas') {
-        const dx = e.clientX - state.dragStart.x;
-        const dy = e.clientY - state.dragStart.y;
-        state.offset.x += dx;
-        state.offset.y += dy;
-        state.dragStart = { x: e.clientX, y: e.clientY };
-        renderCanvas();
-    } else if (state.dragType === 'note' || state.dragType === 'group') {
-        const item = state.dragItem;
-        if (!item) return;
-        const dx = (currentMouseCanvasPos.x - state.dragOffset.x) - item.x;
-        const dy = (currentMouseCanvasPos.y - state.dragOffset.y) - item.y;
-
-        if (dx !== 0 || dy !== 0) {
-            item.x += dx;
-            item.y += dy;
-
-            // グループなら子要素も一緒に移動
-            if (state.dragType === 'group') {
-                moveGroupAndChildren(item.id, dx, dy);
-            }
-            // 選択中の他のアイテムも移動（ただし、グループ移動に巻き込まれているものは二重移動しないように注意が必要だが、今回は簡易実装）
-            // Simpler: Just move dragged item. Multi-select drag not fully implemented in main logic yet.
-        }
-        renderCanvas();
-    } else if (state.dragType === 'resize') {
-        const item = state.dragItem;
-        const edge = state.resizeEdge;
-
-        if (edge.includes('e')) {
-            const w = (currentMouseCanvasPos.x - item.x);
-            if (w > 100) item.width = w;
-        }
-        if (edge.includes('s')) {
-            const h = (currentMouseCanvasPos.y - item.y);
-            if (h > 50) item.height = h;
-        }
-        renderCanvas();
-    }
-}
-
-function handleMouseUp() {
-    state.isDragging = false;
-    DOM.canvasContainer.style.cursor = 'default';
-    if (state.dragType === 'note' || state.dragType === 'group' || state.dragType === 'resize') {
-        if (state.dragType !== 'resize') updateItemParent(state.dragItem);
-        cleanupEmptyGroups(); // グループから出た、あるいは殻になったグループの掃除
-        saveData();
-    }
-    state.dragType = null;
-    state.dragItem = null;
-}
-
-function updateItemParent(item) {
-    if (!item) return;
-    const cx = item.x + (item.width || (typeof item.id === 'string' ? 400 : 300)) / 2;
-    const cy = item.y + (item.height || (typeof item.id === 'string' ? 300 : 150)) / 2;
-
-    // Find smallest enclosing group
-    // Sort logic handled by finding ALL enclosing groups and picking the one with max depth?
-    // Or just finding the one with the smallest area? Smallest area is reliable.
-    const candidates = state.groups.filter(g => {
-        if (g.collapsed) return false;
-        if (g.id === item.id) return false; // Self
-        if (typeof item.id === 'string' && isDescendant(item.id, g.id)) return false; // Cannot drop parent into child
-        return (cx >= g.x && cx <= g.x + (g.width || 400) && cy >= g.y && cy <= g.y + (g.height || 300));
-    });
-
-    if (candidates.length > 0) {
-        // Pick smallest area (likely the innermost)
-        candidates.sort((a, b) => ((a.width * a.height) - (b.width * b.height)));
-        item.groupId = candidates[0].id;
-    } else {
-        item.groupId = null;
-    }
-}
-
-function isDescendant(parentId, childId) {
-    // Check if childId is a descendant of parentId
-    const c = state.groups.find(g => g.id === childId);
-    if (!c || !c.groupId) return false;
-    if (c.groupId === parentId) return true;
-    return isDescendant(parentId, c.groupId);
-}
-
-function handleWheel(e) {
-    if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = -e.deltaY * 0.001;
-        state.zoom = Math.min(Math.max(0.1, state.zoom + delta), 3);
-        renderCanvas();
-    } else {
-        state.offset.x -= e.deltaX;
-        state.offset.y -= e.deltaY;
-        renderCanvas();
-    }
-}
-
-// Item Drag Starters
-function startDrag(e, type) {
-    if (e.target.tagName === 'INPUT' || e.target.closest('.action-btn') || e.target.closest('.btn-collapse')) return;
-    const el = e.currentTarget;
-    const id = el.dataset.id;
-    const pid = type === 'note' ? parseInt(id) : id;
-
-    if (e.metaKey || e.ctrlKey) {
-        if (state.selectedIds.includes(pid)) state.selectedIds = state.selectedIds.filter(s => s !== pid);
-        else state.selectedIds.push(pid);
-        renderCanvas();
         return;
     }
 
-    state.isDragging = true;
-    state.dragType = type;
-    state.dragItem = type === 'note' ? state.notes.find(n => n.id === pid) : state.groups.find(g => g.id === pid);
+    // 2. Click on Item (Note/Group)
+    const itemEl = e.target.closest('.note-card, .group-card');
+    if (itemEl && e.button === 0) {
+        const id = itemEl.dataset.id;
+        const type = itemEl.dataset.type; // 'note' or 'group'
 
-    // オフセット計算: マウス位置 - アイテム位置
-    const pos = getCanvasPos(e);
-    state.dragOffset.x = pos.x - state.dragItem.x;
-    state.dragOffset.y = pos.y - state.dragItem.y;
+        // Handle Multi-selection
+        if (e.metaKey || e.ctrlKey) {
+            const numericId = type === 'note' ? Number(id) : id;
+            if (state.selectedIds.includes(numericId)) {
+                state.selectedIds = state.selectedIds.filter(sid => sid != numericId);
+            } else {
+                state.selectedIds.push(numericId);
+            }
+        } else {
+            // Single selection (if not already selected)
+            const numericId = type === 'note' ? Number(id) : id;
+            if (!state.selectedIds.includes(numericId)) {
+                state.selectedIds = [numericId];
+            }
+        }
 
-    // 前面に持ってくる（配列の最後に移動）
-    if (type === 'note') {
-        state.notes = state.notes.filter(n => n.id !== pid);
-        state.notes.push(state.dragItem);
-    } else {
-        // グループの場合は階層構造があるので単純に配列順序を変えると描画順がおかしくなる可能性があるが
-        // 描画関数でソートしているのでOK
+        renderContextBar();
+        renderCanvas(); // Update visuals
+
+        // Prepare Dragging
+        state.isDragging = true;
+        state.dragType = type; // 'note' or 'group'
+        state.dragItem = type === 'note' ? state.notes.find(n => n.id == id) : state.groups.find(g => g.id == id);
+
+        if (state.dragItem) {
+            state.dragOffset.x = currentMouseCanvasPos.x - state.dragItem.x;
+            state.dragOffset.y = currentMouseCanvasPos.y - state.dragItem.y;
+
+            // Bring to front
+            if (type === 'note') {
+                state.notes = state.notes.filter(n => n.id != id);
+                state.notes.push(state.dragItem);
+            }
+        }
+        return;
     }
+
+    // 3. Connection Mode Check
+    if (state.connectingSource && e.button === 0) {
+        const targetEl = e.target.closest('.note-card, .group-card');
+        if (targetEl) {
+            finishConnection(targetEl.dataset.id, targetEl.dataset.type);
+        }
+        state.connectingSource = null;
+        DOM.canvasContainer.style.cursor = 'default';
+        renderCanvas();
+    }
+}
+
+function finishConnection(targetId, type) {
+    const pid = type === 'group' ? targetId : parseInt(targetId);
+    const sources = Array.isArray(state.connectingSource) ? state.connectingSource : [state.connectingSource];
+    let added = false;
+
+    if (sources.some(srcId => srcId != pid)) {
+        pushHistory();
+        sources.forEach(srcId => {
+            if (srcId != pid) {
+                state.relations.push({
+                    source: srcId,
+                    target: pid,
+                    id: Date.now() + Math.random(),
+                    dash: CONSTANTS.DASH_PATTERNS[Math.floor(Math.random() * CONSTANTS.DASH_PATTERNS.length)]
+                });
+                added = true;
+            }
+        });
+        if (added) saveData();
+    }
+}
+
+// ===========================================================================
+// CONTEXT BAR
+// ===========================================================================
+
+function renderContextBar() {
+    const bar = document.getElementById('context-bar');
+    if (!bar) return;
+
+    if (state.selectedIds.length === 0) {
+        bar.classList.remove('active');
+        return;
+    }
+
+    bar.classList.add('active');
+
+    const count = state.selectedIds.length;
+
+    let html = `
+        <div class="ctx-info">${count} 選択中</div>
+        <button class="ctx-btn" data-action="ctx-color" title="色変更"><i data-lucide="palette"></i></button>
+        <button class="ctx-btn" data-action="ctx-connect" title="関係付け"><i data-lucide="link"></i></button>
+    `;
+
+    if (count > 1) {
+        html += `
+             <button class="ctx-btn ai-action" data-action="ctx-ai-naming" title="AIでグループ化"><i data-lucide="bot"></i></button>
+        `;
+    }
+
+    html += `
+        <div class="ctx-divider"></div>
+        <button class="ctx-btn delete" data-action="ctx-delete" title="削除"><i data-lucide="trash-2"></i></button>
+    `;
+
+    bar.innerHTML = html;
+    lucide.createIcons();
 }
 
 function startResize(e, item, edge) {
     e.stopPropagation();
+    e.preventDefault();
+
     state.isDragging = true;
     state.dragType = 'resize';
     state.dragItem = item;
     state.resizeEdge = edge;
-}
 
-function getCanvasPos(e) {
-    const rect = DOM.canvasContainer.getBoundingClientRect();
-    const x = (e.clientX - rect.left - state.offset.x) / state.zoom;
-    const y = (e.clientY - rect.top - state.offset.y) / state.zoom;
-    return { x, y };
+    const handleMouseMove = (moveEvent) => {
+        if (!state.isDragging || state.dragType !== 'resize') return;
+
+        requestAnimationFrame(() => {
+            const pos = getCanvasPos(moveEvent);
+            const item = state.dragItem;
+            const edge = state.resizeEdge;
+
+            if (!item || !edge) return;
+
+            const mouseX = pos.x;
+            const mouseY = pos.y;
+
+            let newX = item.x;
+            let newY = item.y;
+            let newW = item.width || (typeof item.id === 'string' ? 400 : 300);
+            let newH = item.height || (typeof item.id === 'string' ? 300 : 150);
+
+            const minW = 100;
+            const minH = 50;
+
+            if (edge.includes('e')) {
+                newW = Math.max(minW, mouseX - item.x);
+            }
+            if (edge.includes('w')) {
+                const right = item.x + newW;
+                newX = mouseX;
+                newW = Math.max(minW, right - newX);
+            }
+            if (edge.includes('s')) {
+                newH = Math.max(minH, mouseY - item.y);
+            }
+            if (edge.includes('n')) {
+                const bottom = item.y + newH;
+                newY = mouseY;
+                newH = Math.max(minH, bottom - newY);
+            }
+
+            item.x = newX;
+            item.width = newW;
+            item.y = newY;
+            item.height = newH;
+
+            renderCanvas();
+        });
+    };
+
+    const handleMouseUp = () => {
+        if (state.dragType === 'resize') {
+            cleanupEmptyGroups();
+            saveData();
+        }
+        state.isDragging = false;
+        state.dragType = null;
+        state.dragItem = null;
+
+        document.body.removeEventListener('mousemove', handleMouseMove);
+        document.body.removeEventListener('mouseup', handleMouseUp);
+        DOM.canvasContainer.style.cursor = 'default';
+    };
+
+    document.body.addEventListener('mousemove', handleMouseMove);
+    document.body.addEventListener('mouseup', handleMouseUp);
 }
 
 function moveGroupAndChildren(groupId, dx, dy) {
@@ -241,63 +501,13 @@ function moveGroupAndChildren(groupId, dx, dy) {
 }
 
 function updateGroupBounds(gid) {
-    // グループのサイズを中身に合わせて調整するロジック（簡易版）
-    // 現状は手動リサイズと自動判定が混在しないよう、明示的なリサイズがない場合のみ自動調整するなどの制御が必要
-    // 今回はスキップ
 }
 
-function attachNoteEventListeners(el, n) {
-    el.onmousedown = e => {
-        if (!n.collapsed) {
-            const edge = getResizeEdge(e, el);
-            if (edge) { startResize(e, n, edge); return; }
-        }
-        startDrag(e, 'note');
-    };
-    el.onmousemove = e => {
-        if (!n.collapsed && !state.dragType) {
-            const edge = getResizeEdge(e, el);
-            el.style.cursor = edge ? getResizeCursor(edge) : 'auto';
-        }
-    };
-    el.querySelector('.title-input').onclick = e => e.stopPropagation();
-    el.querySelector('.title-input').onchange = e => { pushHistory(); n.title = e.target.value; saveData(); };
-    el.querySelector('.btn-collapse').onclick = e => { e.stopPropagation(); n.collapsed = !n.collapsed; renderCanvas(); saveData(); };
-    el.querySelector('.btn-maximize').onclick = e => { e.stopPropagation(); openViewModal(n); };
-    el.querySelector('.btn-duplicate').onclick = e => { e.stopPropagation(); duplicateItem(n.id, 'note'); };
-    el.querySelector('.btn-connect').onclick = e => { e.stopPropagation(); state.connectingSource = n.id; renderCanvas(); };
-    el.querySelector('.btn-ghost').onclick = e => { e.stopPropagation(); n.isGhost = !n.isGhost; renderCanvas(); };
-    el.querySelector('.btn-delete').onclick = e => { e.stopPropagation(); deleteItem(n.id, 'note'); };
-    el.querySelector('.btn-color').onclick = e => { e.stopPropagation(); rotateColor(n); };
-}
-
-function attachGroupEventListeners(el, g) {
-    el.onmousedown = e => {
-        const edge = !g.collapsed && getResizeEdge(e, el);
-        if (edge) startResize(e, g, edge); else startDrag(e, 'group');
-    };
-    el.onmousemove = e => {
-        if (!g.collapsed && !state.dragType) {
-            const edge = getResizeEdge(e, el);
-            el.style.cursor = edge ? getResizeCursor(edge) : 'auto';
-        }
-    };
-    el.querySelector('.group-title-input').onclick = e => e.stopPropagation();
-    el.querySelector('.group-title-input').onchange = e => { pushHistory(); g.title = e.target.value; saveData(); };
-    el.querySelector('.btn-collapse').onclick = e => { e.stopPropagation(); g.collapsed = !g.collapsed; renderCanvas(); saveData(); };
-    el.querySelector('.btn-duplicate').onclick = e => { e.stopPropagation(); duplicateItem(g.id, 'group'); };
-    el.querySelector('.btn-connect').onclick = e => { e.stopPropagation(); state.connectingSource = g.id; renderCanvas(); };
-    el.querySelector('.btn-color').onclick = e => { e.stopPropagation(); rotateColor(g); };
-    el.querySelector('.btn-delete').onclick = e => { e.stopPropagation(); deleteItem(g.id, 'group'); };
-}
-
-// Logic Actions
 function addGroup() {
     pushHistory();
     const p = findEmptyPosition(currentMouseCanvasPos.x, currentMouseCanvasPos.y, 400, 300);
     const g = { id: 'g' + Date.now(), title: "", x: p.x, y: p.y, width: 400, height: 300, collapsed: false, groupId: null };
     state.groups.push(g);
-    // Check if added over items -> auto group? No, keep simple.
     renderCanvas(); saveData();
 }
 
@@ -306,30 +516,192 @@ function saveNote() {
     const c = DOM.noteInput.value.trim();
     if (!c && !t) return;
     pushHistory();
-    const p = findEmptyPosition(currentMouseCanvasPos.x, currentMouseCanvasPos.y, 300, 150);
-    const n = { id: Date.now(), title: t, content: c, x: p.x, y: p.y, width: CONSTANTS.NOTE_WIDTH, height: CONSTANTS.NOTE_HEIGHT, color: getRandomColor(), collapsed: false };
+
+    const centerX = (window.innerWidth / 2 - state.offset.x) / state.zoom;
+    const centerY = (window.innerHeight / 2 - state.offset.y) / state.zoom;
+
+    const p = findEmptyPosition(centerX - 150, centerY - 75, 300, 150);
+
+    const n = { id: Date.now(), title: t, content: c, x: p.x, y: p.y, width: CONSTANTS.NOTE_WIDTH, height: CONSTANTS.NOTE_HEIGHT, color: 'slate', collapsed: false };
     state.notes.push(n);
-    renderCanvas(); saveData(); closeNoteModal();
+    renderCanvas(); saveData(); closeDialog('note-dialog');
 }
 
-function deleteItem(id, type) {
-    if (state.pendingDelete && state.pendingDelete.id === id) {
-        pushHistory();
-        if (type === 'note') state.notes = state.notes.filter(n => n.id !== id);
-        else if (type === 'group') {
-            state.groups = state.groups.filter(g => g.id !== id);
-            state.notes.forEach(n => { if (n.groupId === id) n.groupId = null; });
-            state.groups.forEach(g => { if (g.groupId === id) g.groupId = null; });
-        } else if (type === 'relation') {
-            state.relations = state.relations.filter(r => r.id !== id);
-        }
-        state.pendingDelete = null;
-        cleanupEmptyGroups(); // 削除によって1つだけになったグループがあれば掃除
-        renderCanvas(); saveData();
-    } else {
-        state.pendingDelete = { id, timer: setTimeout(() => { state.pendingDelete = null; renderCanvas(); }, 3000) };
+function handleKeydown(e) {
+    if (e.key === ' ' && !state.isDragging) { DOM.canvasContainer.style.cursor = 'grab'; }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'y') { e.preventDefault(); redo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        state.selectedIds = [...state.notes.map(n => n.id), ...state.groups.map(g => g.id)];
         renderCanvas();
     }
+
+    if (e.key === 'Escape') {
+        if (document.querySelector('dialog[open]')) {
+            document.querySelectorAll('dialog[open]').forEach(d => d.close());
+        } else if (state.connectingSource) {
+            state.connectingSource = null;
+            renderCanvas();
+        } else if (state.selectedIds.length > 0) {
+            state.selectedIds = [];
+            renderCanvas();
+        }
+    }
+
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedIds.length > 0) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            deleteItem(state.selectedIds, 'multi');
+        }
+    }
+}
+
+function handleMouseMove(e) {
+    currentMouseCanvasPos = getCanvasPos(e);
+
+    if (state.isDragging) {
+        if (state.dragType === 'canvas') {
+            const dx = e.clientX - state.dragStart.x;
+            const dy = e.clientY - state.dragStart.y;
+            state.offset.x += dx;
+            state.offset.y += dy;
+            state.dragStart = { x: e.clientX, y: e.clientY };
+            renderCanvas();
+        } else if (state.dragType === 'note' && state.dragItem) {
+            state.dragItem.x = currentMouseCanvasPos.x - state.dragOffset.x;
+            state.dragItem.y = currentMouseCanvasPos.y - state.dragOffset.y;
+            renderCanvas(); // Simple render
+        } else if (state.dragType === 'group' && state.dragItem) {
+            const dx = (currentMouseCanvasPos.x - state.dragOffset.x) - state.dragItem.x;
+            const dy = (currentMouseCanvasPos.y - state.dragOffset.y) - state.dragItem.y;
+            state.dragItem.x += dx;
+            state.dragItem.y += dy;
+            moveGroupAndChildren(state.dragItem.id, dx, dy);
+            renderCanvas();
+        }
+    }
+
+    if (state.connectingSource) {
+        renderCanvas(); // Redraw connection line
+    }
+}
+
+function handleMouseUp() {
+    if (state.isDragging) {
+        if (state.dragType === 'note' || state.dragType === 'group') {
+            saveData();
+        }
+        state.isDragging = false;
+        state.dragItem = null;
+        DOM.canvasContainer.style.cursor = 'default';
+
+        // Snap/Group logic could go here
+    }
+}
+
+function handleWheel(e) {
+    e.preventDefault();
+
+    if (e.ctrlKey || e.metaKey) {
+        const delta = -e.deltaY * 0.001;
+        const rect = DOM.canvasContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        applyZoom(delta, mouseX, mouseY);
+    } else {
+        state.offset.x -= e.deltaX;
+        state.offset.y -= e.deltaY;
+        renderCanvas();
+    }
+}
+
+function applyZoom(delta, centerX, centerY) {
+    const oldZoom = state.zoom;
+    const newZoom = Math.min(Math.max(0.1, oldZoom + delta), 3);
+
+    const worldX = (centerX - state.offset.x) / oldZoom;
+    const worldY = (centerY - state.offset.y) / oldZoom;
+
+    state.zoom = newZoom;
+
+    state.offset.x = centerX - worldX * newZoom;
+    state.offset.y = centerY - worldY * newZoom;
+
+    renderCanvas();
+}
+
+function deleteItem(target, type) {
+    console.log('deleteItem called:', { target, type, isDeleting: state.isDeleting });
+
+    if (state.isDeleting) {
+        return;
+    }
+
+    let ids = [];
+    let msg = "";
+
+    if (type === 'multi') {
+        ids = Array.isArray(target) ? target : [target];
+        msg = `選択した ${ids.length} 個の要素を削除しますか？`;
+    } else {
+        ids = [target];
+        if (type === 'group') msg = "このグループと中身の関係を削除しますか？\n（ノートはグループから出されます）";
+        else if (type === 'note') msg = "このノートを削除しますか？";
+        else if (type === 'relation') msg = "この関係を削除しますか？";
+    }
+
+    state.isDeleting = true;
+
+    showConfirmModal(msg, () => {
+        pushHistory();
+        executeDeletion(ids);
+        renderCanvas();
+        saveData();
+        state.isDeleting = false;
+        console.log('Deletion completed');
+    });
+
+    // Safety timeout
+    setTimeout(() => { state.isDeleting = false; }, 2000);
+}
+
+
+function executeDeletion(ids) {
+    const idsSet = new Set(ids);
+
+    // 1. Delete Notes
+    state.notes = state.notes.filter(n => !idsSet.has(n.id));
+
+    // 2. Delete Groups
+    const deletedGroupIds = state.groups.filter(g => idsSet.has(g.id)).map(g => g.id);
+
+    deletedGroupIds.forEach(gid => {
+        const group = state.groups.find(g => g.id === gid);
+        const parentId = group ? group.groupId : null;
+
+        state.notes.forEach(n => {
+            if (n.groupId === gid) n.groupId = parentId;
+        });
+
+        state.groups.forEach(g => {
+            if (g.groupId === gid) g.groupId = parentId;
+        });
+    });
+
+    state.groups = state.groups.filter(g => !idsSet.has(g.id));
+
+    // 3. Delete Relations
+    const allRemainingIds = new Set([...state.notes.map(n => n.id), ...state.groups.map(g => g.id)]);
+
+    state.relations = state.relations.filter(r => {
+        if (idsSet.has(r.id)) return false;
+        if (!allRemainingIds.has(r.source) || !allRemainingIds.has(r.target)) return false;
+        return true;
+    });
+
+    state.selectedIds = [];
+    cleanupEmptyGroups();
 }
 
 function duplicateItem(id, type) {
@@ -367,30 +739,16 @@ function rotateColor(it) {
     renderCanvas();
 }
 
-function autoRearrange() {
-    // Simple grid arrange
-    pushHistory();
-    let col = 0, row = 0;
-    const items = [...state.groups.filter(g => !g.groupId), ...state.notes.filter(n => !n.groupId)];
-    items.forEach((it, i) => {
-        it.x = col * 420;
-        it.y = row * 450;
-        col++;
-        if (col > 3) { col = 0; row++; }
-        // Children move relatively? No, this is destructive rearrange.
-        // Actually we need to move children too if we move parent.
-        // But for root items, we assume they carry their children.
-        if (typeof it.id === 'string') moveGroupAndChildren(it.id, 0, 0); // Logic flaw: absolute pos set above.
-        // Fixing arrange logic is out of scope for "Refactor", keeping existing behavior.
-    });
-    renderCanvas(); saveData();
+function cycleColor(id, type) {
+    const item = type === 'note' ? state.notes.find(n => n.id == id) : state.groups.find(g => g.id == id);
+    if (item) rotateColor(item);
 }
+
 
 function cleanupEmptyGroups() {
     let changed = false;
     do {
         changed = false;
-        // 0個または1個の要素しか持たないグループを抽出
         const toDel = state.groups.filter(g => {
             const notes = state.notes.filter(n => n.groupId === g.id);
             const subs = state.groups.filter(gr => gr.groupId === g.id);
@@ -400,10 +758,8 @@ function cleanupEmptyGroups() {
         if (toDel.length > 0) {
             toDel.forEach(g => {
                 const parentId = g.groupId;
-                // 中身（もしあれば）の親を、削除されるグループの親に書き換える
                 state.notes.forEach(n => { if (n.groupId === g.id) n.groupId = parentId; });
                 state.groups.forEach(gr => { if (gr.groupId === g.id) gr.groupId = parentId; });
-                // グループ自体を削除
                 state.groups = state.groups.filter(gr => gr.id !== g.id);
                 changed = true;
             });
@@ -413,65 +769,24 @@ function cleanupEmptyGroups() {
     if (state.groups.length >= 0) { renderCanvas(); }
 }
 
-// Modals
-function openNoteModal() { DOM.noteModal.classList.add('active'); DOM.noteTitleInput.value = ''; DOM.noteInput.value = ''; DOM.noteTitleInput.focus(); }
-function closeNoteModal() { DOM.noteModal.classList.remove('active'); DOM.noteTitleInput.value = ''; DOM.noteInput.value = ''; }
-function openImportModal() { DOM.importModal.classList.add('active'); DOM.importInput.focus(); }
-function closeImportModal() { DOM.importModal.classList.remove('active'); DOM.importInput.value = ''; }
-function openViewModal(n) { DOM.viewTitle.textContent = n.title || 'ノート閲覧'; DOM.viewBody.textContent = n.content; DOM.viewModal.classList.add('active'); }
-function closeViewModal() { DOM.viewModal.classList.remove('active'); }
-function toggleView() {
-    const isCanvas = DOM.canvasView.classList.contains('active');
-    if (isCanvas) {
-        DOM.canvasView.classList.remove('active');
-        DOM.outlinerView.classList.add('active');
-        renderOutline();
-    } else {
-        DOM.outlinerView.classList.remove('active');
-        DOM.canvasView.classList.add('active');
-        renderCanvas();
-    }
-}
+function getResizeEdge(e, el) {
+    const r = el.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    const padding = 16;
 
-// Import Logic
-function handleImport() {
-    const text = DOM.importInput.value.trim();
-    if (!text) return;
+    const nearTop = y < padding;
+    const nearBottom = y > r.height - padding;
+    const nearLeft = x < padding;
+    const nearRight = x > r.width - padding;
 
-    let items = [];
-    const lines = text.split('\n');
-    const isMd = lines.some(l => l.trim().startsWith('- '));
-
-    if (isMd) {
-        let current = null;
-        lines.forEach(line => {
-            const top = line.match(/^-\s+(.*)/);
-            const sub = line.match(/^\s+-\s+(.*)/);
-            if (top) {
-                if (current) items.push(current);
-                current = { first: top[1].trim(), second: [] };
-            }
-            else if (sub) {
-                if (current) current.second.push(sub[1].trim());
-                else items.push({ title: "", content: sub[1].trim() });
-            }
-            else if (current) {
-                if (current.second.length) current.second[current.second.length - 1] += ' ' + line.trim();
-                else current.first += ' ' + line.trim();
-            }
-        });
-        if (current) items.push(current);
-        items = items.map(it => ({
-            title: it.second.length ? it.first : "",
-            content: it.second.length ? it.second.join('\n\n') : it.first
-        }));
-    } else {
-        items = text.split(/\n\s*\n/).map(p => ({ title: "", content: p.trim() })).filter(p => p.content);
-    }
-
-    items.forEach((it, i) => {
-        const p = findEmptyPosition(currentMouseCanvasPos.x + i * 20, currentMouseCanvasPos.y + i * 20, 300, 150);
-        state.notes.push({ id: Date.now() + i, title: it.title, content: it.content, x: p.x, y: p.y, width: CONSTANTS.NOTE_WIDTH, height: CONSTANTS.NOTE_HEIGHT, color: 'slate', collapsed: false });
-    });
-    renderCanvas(); saveData(); closeImportModal();
+    if (nearBottom && nearRight) return 'se';
+    if (nearBottom && nearLeft) return 'sw';
+    if (nearTop && nearRight) return 'ne';
+    if (nearTop && nearLeft) return 'nw';
+    if (nearBottom) return 's';
+    if (nearRight) return 'e';
+    if (nearLeft) return 'w';
+    if (nearTop) return 'n';
+    return null;
 }

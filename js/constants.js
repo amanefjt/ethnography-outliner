@@ -3,7 +3,7 @@ const CONSTANTS = {
     NOTE_HEIGHT: 150,
     DEFAULT_GROUP_WIDTH: 400,
     DEFAULT_GROUP_HEIGHT: 300,
-    COLORS: ['slate', 'red', 'orange', 'amber', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'],
+    COLORS: ['rose', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple'],
     DASH_PATTERNS: ['none', '5,5', '10,10', '20,10,5,10', '15,10,5,10,15'],
     GRID_SIZE: 1 // No grid snap effectively
 };

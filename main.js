@@ -3,6 +3,7 @@
 // ============================================================================
 
 window.onload = () => {
+    console.log("Main.js: window.onload fired");
     DOM.canvasContainer = document.getElementById('canvas-container');
     DOM.canvas = document.getElementById('canvas');
     DOM.canvasView = document.getElementById('canvas-view');
@@ -31,14 +32,88 @@ window.onload = () => {
     DOM.undoBtn = document.getElementById('undo');
     DOM.redoBtn = document.getElementById('redo');
 
+    // Project Management
+    DOM.projectBtn = document.getElementById('btn-project');
+    DOM.projectModal = document.getElementById('project-modal');
+    DOM.closeProjectBtn = document.getElementById('btn-close-project');
+    DOM.createProjectBtn = document.getElementById('btn-create-project');
+    DOM.projectListContainer = document.getElementById('project-list-container');
+    DOM.newProjectNameInput = document.getElementById('new-project-name');
+    DOM.currentProjectName = document.getElementById('current-project-name');
+
+    // AI Proposal
+    DOM.aiProposalModal = document.getElementById('ai-proposal-modal');
+    DOM.aiProposalTitle = document.getElementById('ai-proposal-title');
+    DOM.aiProposalReason = document.getElementById('ai-proposal-reason');
+    DOM.aiProposalContent = document.getElementById('ai-proposal-content');
+    DOM.rejectProposalBtn = document.getElementById('btn-reject-proposal');
+    DOM.acceptProposalBtn = document.getElementById('btn-accept-proposal');
+
+    // Confirm Modal - 削除確認モーダルのDOM初期化
+    DOM.confirmModal = document.getElementById('confirm-modal');
+    DOM.confirmMessage = document.getElementById('confirm-message');
+
     loadStateFromStorage();
+
+    // Data Sanitization
+    try {
+        sanitizeData();
+    } catch (e) {
+        console.error('Data sanitization failed:', e);
+    }
+
+
     initializeDefaultData();
-    renderCanvas();
+
+    try {
+        renderCanvas();
+    } catch (e) {
+        console.error('Fatal error in renderCanvas:', e);
+    }
+
+    // Ensure event listeners are attached even if render fails
     setupEventListeners();
 
     // Initial centering (Zoom to Fit)
     zoomToFit();
 };
+
+function sanitizeData() {
+    // 1. Remove notes with invalid IDs or IDs that match known corrupted data
+    const badNoteIds = ['1770460392938'];
+    if (state.notes) {
+        state.notes = state.notes.filter(n => {
+            if (!n || !n.id) return false;
+            // String comparison for ID
+            if (badNoteIds.some(badId => String(n.id) === String(badId))) {
+                console.warn('Removing corrupted note during sanitize:', n.id);
+                return false;
+            }
+            return true;
+        });
+
+        // 2. Fix NaN coordinates
+        state.notes.forEach(n => {
+            if (typeof n.x !== 'number' || isNaN(n.x)) n.x = 0;
+            if (typeof n.y !== 'number' || isNaN(n.y)) n.y = 0;
+        });
+    }
+
+    if (state.groups) {
+        // 3. Fix NaN coordinates for groups
+        state.groups.forEach(g => {
+            if (typeof g.x !== 'number' || isNaN(g.x)) g.x = 0;
+            if (typeof g.y !== 'number' || isNaN(g.y)) g.y = 0;
+            if (typeof g.width !== 'number' || isNaN(g.width)) g.width = 300;
+            if (typeof g.height !== 'number' || isNaN(g.height)) g.height = 300;
+        });
+    }
+
+    // Save sanitized state
+    saveData();
+}
+
+
 
 function zoomToFit() {
     const items = [...state.notes, ...state.groups.filter(g => !g.groupId)];
@@ -70,8 +145,15 @@ function zoomToFit() {
 
     state.zoom = zoom;
     // Center the content
+    // Center the content
     state.offset.x = (screenW - w * zoom) / 2 - minX * zoom + padding * zoom;
     state.offset.y = (screenH - h * zoom) / 2 - minY * zoom + padding * zoom;
+
+    console.log('zoomToFit calculated:', {
+        minX, minY, maxX, maxY,
+        w, h, screenW, screenH,
+        zoom, offset: state.offset
+    });
 
     renderCanvas();
 }

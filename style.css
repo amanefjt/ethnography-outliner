@@ -32,6 +32,9 @@
     --purple-border: #a855f7;
     --purple-bg: #faf5ff;
     --purple-selection: #9333ea;
+    --cyan-border: #06b6d4;
+    --cyan-bg: #ecfeff;
+    --cyan-selection: #0891b2;
 }
 
 * {
@@ -269,6 +272,25 @@ main {
     white-space: nowrap;
 }
 
+.modal button {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    pointer-events: auto !important;
+    /* モーダルボタンは必ずクリック可能に */
+    z-index: 10001;
+    /* モーダルより前面に */
+}
+
+.modal button:hover {
+    background: var(--hover-color);
+    pointer-events: auto !important;
+    /* ホバー時も確実にクリック可能に */
+}
+
 .note-card {
     position: absolute;
     width: 300px;
@@ -419,6 +441,13 @@ main {
     --selection-glow: rgba(147, 51, 234, 0.15);
 }
 
+.color-cyan {
+    border-color: var(--cyan-border) !important;
+    background-color: var(--cyan-bg) !important;
+    --selection-color: var(--cyan-selection);
+    --selection-glow: rgba(6, 182, 212, 0.15);
+}
+
 .canvas-controls {
     position: absolute;
     bottom: 24px;
@@ -510,9 +539,19 @@ main {
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
-    color: #cbd5e1;
-    font-size: 0.65rem;
-    font-family: monospace;
+    font-size: 0.75rem;
+    /* Slightly larger */
+    font-family: inherit;
+    /* Use main font */
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.quick-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
 }
 
 .btn-connect {
@@ -540,15 +579,28 @@ main {
     overflow: hidden !important;
 }
 
-.note-card.collapsed .title-input,
-.group-card.collapsed .group-header input {
+.note-card.collapsed .title-display,
+.group-card.collapsed .title-display {
     text-align: center;
     width: 100%;
+    height: 100%;
     background: transparent;
     pointer-events: none;
-    font-size: 1.8rem;
-    /* マスク時はタイトルを大きく */
-    font-weight: 800;
+    font-size: 1.5rem;
+    /* カードサイズに応じて大きく */
+    font-weight: 700;
+    white-space: normal;
+    /* 複数行を許可 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+    word-break: break-word;
+    /* 長い単語も折り返し */
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
 }
 
 .note-card.collapsed .content,
@@ -562,16 +614,18 @@ main {
     position: absolute;
     left: 8px;
     top: 8px;
-    /* 中央(50%)ではなく左上に固定 */
     z-index: 20;
+    pointer-events: auto !important;
+    /* 折りたたみボタンは必ずクリック可能に */
 }
 
 .group-card.collapsed .btn-collapse {
     position: absolute;
     left: 8px;
     top: 8px;
-    /* 中央(50%)ではなく左上に固定 */
     z-index: 20;
+    pointer-events: auto !important;
+    /* 折りたたみボタンは必ずクリック可能に */
 }
 
 .btn-collapse {
@@ -598,7 +652,15 @@ main {
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 9999;
+    pointer-events: none;
+    /* オーバーレイは無効化、コンテンツで有効化 */
+}
+
+.modal.active {
+    display: flex;
+    pointer-events: auto;
+    /* アクティブ時はクリックを受け付ける */
 }
 
 .meta {
@@ -681,50 +743,85 @@ main {
     height: 12px;
 }
 
-.modal.active {
-    display: flex;
-}
+/* .modal.activeは上の.modalセクションに統合済み */
 
 .modal-content {
     background: white;
     padding: 32px;
     border-radius: 16px;
     width: 500px;
+    max-height: 90vh;
+    /* 画面からはみ出さないように */
     display: flex;
     flex-direction: column;
     gap: 16px;
+    z-index: 10010 !important;
+    pointer-events: auto !important;
+    position: relative;
+    overflow: hidden;
+    /* 内部スクロールのため */
+}
+
+/* スクロール可能なボディ領域を作るための汎用クラス */
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    /* Flexboxの子要素でスクロールさせるためのハック */
+}
+
+.modal-content * {
+    pointer-events: auto !important;
 }
 
 .modal-content textarea {
-    height: 200px;
+    flex: 1;
+    /* 余った領域を埋める */
+    min-height: 200px;
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     outline: none;
     font-family: inherit;
     line-height: 1.6;
+    resize: vertical;
 }
 
 #import-input {
-    height: 400px;
+    min-height: 300px;
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    z-index: 10011 !important;
+    position: relative;
+    padding-top: 16px;
+    border-top: 1px solid transparent;
+    /* 境界線が必要なら色を指定 */
+    flex-shrink: 0;
+    /* フッターは縮小させない */
+}
 }
 
-.btn-secondary {
-    background: #f1f5f9;
-    color: var(--text-secondary);
+.btn-primary {
+    background: var(--accent-color);
+    color: white;
     border: none;
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
+    font-weight: 600;
+    pointer-events: auto !important;
+    z-index: 10012 !important;
+    position: relative;
 }
 
-/* Outline Styles */
+.project-item:hover {
+    background-color: var(--hover-color);
+}
+
 .outliner-container {
     padding: 60px 40px;
     height: 100%;
@@ -975,6 +1072,19 @@ main {
 
 .group-card.color-pink .group-header {
     background: rgba(252, 231, 243, 0.5);
+}
+
+/* Force interactions */
+.canvas-container {
+    pointer-events: auto !important;
+    touch-action: none;
+    /* Disable browser handling of gestures */
+}
+
+.modal:not(.active) {
+    pointer-events: none !important;
+    display: none !important;
+    z-index: -1 !important;
 }
 
 /* Rose */
